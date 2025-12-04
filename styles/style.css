@@ -1,19 +1,20 @@
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
 }
+
 :root {
   --bg-color: #ffffff;
   --text-color: #111111;
-  --link-color: #007acc;
+  --link-color: #5bc0c7;
 }
 
 [data-theme="dark"] {
   --bg-color: #111111;
   --text-color: #eeeeee;
-  --link-color: #66aaff;
+  --link-color: #5bc0c7;
 }
 
 body {
@@ -46,4 +47,8 @@ a {
 
 #theme-toggle:hover img {
   transform: rotate(20deg);
+}
+
+main {
+  padding: 2rem;
 }
