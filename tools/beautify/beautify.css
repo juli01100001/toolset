@@ -3,6 +3,7 @@
     white-space: pre-wrap;
     min-height: 400px;
     padding: 20px;
+    outline: none;
 }
 
 header h1 {
