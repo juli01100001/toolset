@@ -1,3 +1,10 @@
-#editor p,a,li {
+#editor {
     font-size: 26px;
+    white-space: pre-wrap;
+    min-height: 400px;
+    padding: 20px;
+}
+
+header h1 {
+    font-size: 20px;
 }
