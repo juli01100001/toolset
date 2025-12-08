@@ -76,3 +76,6 @@ ul {
   display: flex;
   flex-direction: row;
 }
+header h1 {
+    font-size: 18px;
+}
