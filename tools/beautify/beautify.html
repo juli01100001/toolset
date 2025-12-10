@@ -24,7 +24,7 @@
                     <a href="../decoder/decoder.html">
                         <li>decode</li>
                     </a>
-                    
+
                     <a href="./beautify.html">
                         <li>beautify</li>
                     </a>
@@ -32,11 +32,32 @@
             </nav>
 
         </header>
-        
-        <div id="editor">
 
+        <div id="editor" contenteditable="true">
         </div>
     </main>
+
+<script>
+    const editor = document.getElementById("editor");
+
+    editor.classList.add("placeholder");
+    editor.textContent = "drag and drop or paste your code here.";
+
+    editor.addEventListener("focus", () => {
+        if (editor.classList.contains("placeholder")) {
+            editor.textContent = "";
+            editor.classList.remove("placeholder");
+        }
+    });
+
+    editor.addEventListener("blur", () => {
+        if (editor.textContent.trim() === "") {
+            editor.classList.add("placeholder");
+            editor.textContent = "drag and drop or paste your code here.";
+        }
+    });
+
+</script>
 <script src="./beautify.js"></script>
 <script src="../../scripts/script.js"></script>
 
