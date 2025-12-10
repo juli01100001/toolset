@@ -8,5 +8,4 @@
 #editor:empty::before {
     content: "drag and drop or paste your code here";
     color: #888;
-    pointer-events: none;
 }
