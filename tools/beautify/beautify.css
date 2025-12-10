@@ -1,8 +1,12 @@
 #editor {
-    font-size: 26px;
+    font-size: 20px;
     white-space: pre-wrap;
     min-height: 400px;
     outline: none;
 }
 
-
+#editor:empty::before {
+    content: "drag and drop or paste your code here";
+    color: #888;
+    pointer-events: none;
+}
