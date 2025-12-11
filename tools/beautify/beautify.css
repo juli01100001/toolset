@@ -5,6 +5,7 @@
     outline: none;
 }
 
-.placeholder {
-  color: #888;
+#editor.placeholder {
+    color: #888 !important;
+    font-style: italic !important;
 }

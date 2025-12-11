@@ -1,4 +1,94 @@
 const editor = document.getElementById("editor");
+const PLACEHOLDER_TEXT = "drag and drop or paste your code here.";
+
+
+function updatePlaceholder() {
+  const isEmpty = !editor.textContent.trim() ||
+    editor.textContent === PLACEHOLDER_TEXT;
+
+  if (isEmpty) {
+    editor.classList.add("placeholder");
+    editor.textContent = PLACEHOLDER_TEXT;
+  } else {
+    editor.classList.remove("placeholder");
+  }
+}
+
+updatePlaceholder();
+
+editor.addEventListener("focus", () => {
+  if (editor.classList.contains("placeholder")) {
+    editor.textContent = "";
+    editor.classList.remove("placeholder");
+  }
+});
+
+editor.addEventListener("blur", () => {
+  updatePlaceholder();
+});
+
+
+function processContent() {
+  const raw = editor.innerText;
+
+
+  if (raw === PLACEHOLDER_TEXT || !raw.trim()) {
+    updatePlaceholder();
+    return;
+  }
+
+  const hash = raw.length + "|" + raw.slice(0, 100) + "|" + raw.slice(-100);
+  if (hash === lastProcessedHash) return;
+
+  setTimeout(() => {
+    const out = advancedBeautify(raw);
+    const findings = scanSensitivePatterns(out);
+    const html = annotateSensitive(out, findings);
+
+    if (html !== editor.innerHTML) {
+      const selection = saveSelection();
+      editor.innerHTML = html;
+      restoreSelection(selection);
+
+
+      if (!editor.textContent.trim()) {
+        updatePlaceholder();
+      }
+    }
+
+    lastProcessedHash = hash;
+  }, 0);
+}
+
+
+editor.addEventListener("paste", (e) => {
+  e.preventDefault();
+  const text = e.clipboardData.getData("text/plain");
+
+
+  if (editor.classList.contains("placeholder")) {
+    editor.textContent = "";
+    editor.classList.remove("placeholder");
+  }
+
+  document.execCommand("insertText", false, text);
+  setTimeout(processContent, 50);
+});
+
+editor.addEventListener("drop", e => {
+  e.preventDefault();
+  const text = e.dataTransfer.getData("text/plain");
+  if (text) {
+
+    if (editor.classList.contains("placeholder")) {
+      editor.textContent = "";
+      editor.classList.remove("placeholder");
+    }
+
+    document.execCommand("insertText", false, text);
+    processContent();
+  }
+});
 
 
 let debounceTimer = null;
