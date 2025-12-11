@@ -289,3 +289,23 @@ document.head.appendChild(style);
 
 editor.setAttribute('contenteditable', 'true');
 editor.spellcheck = false;
+
+
+const editor = document.getElementById("editor");
+
+editor.classList.add("placeholder");
+editor.textContent = "drag and drop or paste your code here.";
+
+editor.addEventListener("focus", () => {
+  if (editor.classList.contains("placeholder")) {
+    editor.textContent = "";
+    editor.classList.remove("placeholder");
+  }
+});
+
+editor.addEventListener("blur", () => {
+  if (editor.textContent.trim() === "") {
+    editor.classList.add("placeholder");
+    editor.textContent = "drag and drop or paste your code here.";
+  }
+});
