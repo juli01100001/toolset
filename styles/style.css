@@ -8,13 +8,13 @@
 :root {
   --bg-color: #ffffff;
   --text-color: #111111;
-  --link-color: #5bc0c7;
+  --link-color: #111111;
 }
 
 [data-theme="dark"] {
   --bg-color: #111111;
   --text-color: #eeeeee;
-  --link-color: #5bc0c7;
+  --link-color: #eeeeee;
 }
 
 body {
@@ -24,10 +24,14 @@ body {
 }
 
 a {
+  text-decoration: none;
   color: var(--link-color);
 }
 
-
+a:hover {
+  transition: 0.5s;
+  color: #4a9398;
+}
 #theme-toggle {
   background: none;
   border: none;
@@ -51,4 +55,27 @@ a {
 
 main {
   padding: 2rem;
+}
+
+header {
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+}
+header a {
+  font-size: 22px;
+}
+ul {
+  list-style: none;
+}
+li {
+  margin-right: 10px;
+}
+header,
+ul {
+  display: flex;
+  flex-direction: row;
+}
+header h1 {
+    font-size: 18px;
 }
