@@ -41,7 +41,9 @@ a:hover {
   transition: background 0.2s;
 }
 
-
+main {
+  overflow: hidden;
+}
 
 #theme-toggle img {
   width: 24px;
