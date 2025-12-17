@@ -32,7 +32,10 @@
         <br>
         <h1>about toolset</h1>
         <br>
-        <p>even though there are already online tools that do basically the same thing, i built this because i value clarity and ease, both when visualizing and analyzing the results of my findings.</p>
+        <p>even though there are already online tools that do basically the "same thing", i built this because i value
+            clarity and ease, both when visualizing and analyzing the results of my findings; and if you know what i’m
+            talking about, the smallest details can make you lose your flow of focus, e.g. scrolling the screen when
+            you’re trying to analyze a deminified js.</p>
         <br><br><br>
         <div class="visual"></div>
 
@@ -75,8 +78,9 @@
         scene.add(cube)
 
         function animate() {
-            cube.rotation.y += 0.01
-            cube.rotation.x += 0.003
+            cube.rotation.x += 0.017
+            cube.rotation.y += 0.011
+            cube.rotation.z += 0.0029
             renderer.render(scene, camera)
             requestAnimationFrame(animate)
         }
