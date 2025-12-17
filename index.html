@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="./styles/style.css">
-    <link rel="shortcut icon" href="images/favicon.png" type="image/x-icon">
-    <title>toolset</title>
+    <!-- <link rel="shortcut icon" href="images/favicon.ico" type="image/x-icon"> -->
+    <title>home</title>
 </head>
 
 <body>
@@ -30,12 +30,10 @@
         </header>
         <br>
         <br>
-        <h1>a title in here</h1>
+        <h1>about toolset</h1>
         <br>
-        <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Laudantium, incidunt cupiditate alias cumque
-            nostrum quibusdam corrupti enim reprehenderit laboriosam labore dolores possimus minus saepe voluptatem,
-            nihil explicabo iusto numquam necessitatibus.</p>
-
+        <p>even though there are already online tools that do basically the same thing, i built this because i value clarity and ease, both when visualizing and analyzing the results of my findings.</p>
+        <br><br><br>
         <div class="visual"></div>
 
     </main>
@@ -44,52 +42,57 @@
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 
     <script>
-        const scene = new THREE.Scene();
+        const scene = new THREE.Scene()
 
-        const width = window.innerWidth;
-        const height = 400;
+        const width = window.innerWidth
+        const height = 400
 
-        const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-        camera.position.z = 5;
+        const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000)
+        camera.position.z = 5
 
-        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        renderer.setSize(width, height);
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
+        renderer.setSize(width, height)
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+        document.querySelector(".visual").appendChild(renderer.domElement)
 
-        document.querySelector(".visual").appendChild(renderer.domElement);
+        scene.add(
+            new THREE.AmbientLight(0xffffff, 0.5),
+            (() => {
+                const l = new THREE.DirectionalLight(0xffffff, 1.2)
+                l.position.set(5, 5, 5)
+                return l
+            })()
+        )
 
-
-        const geometry = new THREE.BoxGeometry(1.4, 1.4, 1.4);
         const material = new THREE.MeshStandardMaterial({
-            color: "#4a9398",
+            color: "#22A9C9",
             roughness: 0.6,
-            metalness: 0.1
-        });
+            metalness: 0.3
+        })
 
-        const cubes = [];
-        for (let i = 0; i < 4; i++) {
-            const cube = new THREE.Mesh(geometry, material);
-            cube.position.x = i * 2.4 - 3.6;
-            scene.add(cube);
-            cubes.push(cube);
-        }
-
-
-        const light = new THREE.DirectionalLight(0xffffff, 1);
-        light.position.set(5, 5, 5);
-        scene.add(light);
-
+        const geometry = new THREE.BoxGeometry(2.6, 2.6, 2.6)
+        const cube = new THREE.Mesh(geometry, material)
+        scene.add(cube)
 
         function animate() {
-            requestAnimationFrame(animate);
-            cubes.forEach(c => {
-                c.rotation.x += 0.02;
-                c.rotation.y += 0.01;
-            });
-            renderer.render(scene, camera);
+            cube.rotation.y += 0.01
+            cube.rotation.x += 0.003
+            renderer.render(scene, camera)
+            requestAnimationFrame(animate)
         }
 
-        animate();
+        animate()
+
+        window.addEventListener("resize", () => {
+            const w = window.innerWidth
+            renderer.setSize(w, height)
+            camera.aspect = w / height
+            camera.updateProjectionMatrix()
+        })
     </script>
+
+
+
 
     <script src="./scripts/script.js"></script>
 </body>
