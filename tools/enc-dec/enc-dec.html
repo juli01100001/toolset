@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../styles/style.css">
+    <link rel="stylesheet" href="./enc-dec.css">
+    <title>toolset</title>
+</head>
+
+<body>
+    <div class="container">
+        <div class="panel">
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">characters</span>
+                    <span class="stat-value" id="charCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">type</span>
+                    <span class="stat-value" id="detectedType">-</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">last update</span>
+                    <span class="stat-value" id="lastUpdate">-</span>
+                </div>
+            </div>
+
+            <div class="panel-content">
+                <textarea id="input" autofocus
+                    placeholder="Paste JWT, Base64, URL encoded, hex, or any web encoding here..."></textarea>
+            </div>
+
+        </div>
+
+    
+        <div class="panel">
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">DECODING METHODS</span>
+                    <span class="stat-value" id="methodCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">SUCCESSFUL</span>
+                    <span class="stat-value" id="successCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">STATUS</span>
+                    <span class="stat-value" id="status">IDLE</span>
+                </div>
+            </div>
+            <div class="panel-content">
+                <div id="output">
+                    <div style="text-align: center; padding: 40px; color: #95a5a6;">
+                        <h3>Waiting for input...</h3>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+   <script src="./enc-dec.js"></script>
+</body>
+
+</html>
