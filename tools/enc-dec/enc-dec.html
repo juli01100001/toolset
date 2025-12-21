@@ -10,6 +10,28 @@
 </head>
 
 <body>
+    <main>
+        <header>
+
+            <button id="theme-toggle" aria-label="toggle theme">
+                <img id="theme-icon" src="../../images/moon.png" alt="toggle theme" width="24" height="24">
+            </button>
+
+
+            <nav>
+                <ul>
+                    <a href="../../index.html">
+                        <li>home</li>
+                    </a>
+                    <a href="../beautify/beautify.html">
+                        <li>beautify</li>
+                    </a>
+                </ul>
+            </nav>
+
+        </header>
+
+   
     <div class="container">
         <div class="panel">
             <div class="stats">
@@ -38,15 +60,15 @@
         <div class="panel">
             <div class="stats">
                 <div class="stat-item">
-                    <span class="stat-label">DECODING METHODS</span>
+                    <span class="stat-label">methods</span>
                     <span class="stat-value" id="methodCount">0</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">SUCCESSFUL</span>
+                    <span class="stat-label">successful</span>
                     <span class="stat-value" id="successCount">0</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">STATUS</span>
+                    <span class="stat-label">status</span>
                     <span class="stat-value" id="status">IDLE</span>
                 </div>
             </div>
@@ -61,7 +83,8 @@
 
         </div>
     </div>
-
+ </main>
+ <script src="../../scripts/script.js"></script>
    <script src="./enc-dec.js"></script>
 </body>
 
