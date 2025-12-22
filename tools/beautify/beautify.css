@@ -3,6 +3,7 @@
     white-space: pre-wrap;
     min-height: 400px;
     outline: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 #editor.placeholder {
