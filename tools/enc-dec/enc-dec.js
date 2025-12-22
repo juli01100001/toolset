@@ -1,554 +1,313 @@
-class AutoWebDecoder {
-    constructor() {
-        this.delimiters = ['.', '-', '_'];
-        this.debounceTimer = null;
-        this.debounceDelay = 500;
-    }
+const left = document.getElementById("left");
+const right = document.getElementById("right");
 
-    detectAndDecodeAll(input) {
-        const results = {
-            timestamp: new Date().toLocaleTimeString(),
-            inputLength: input.length,
-            detectedType: 'unknown',
-            methods: []
-        };
+const PLACEHOLDERS = {
+    left: "paste encoded input here",
+    right: "output"
+};
 
-        if (!input || input.trim().length === 0) {
-            return results;
-        }
+let lock = null;
 
-
-        const hasDots = input.includes('.');
-
-        if (hasDots) {
-
-            const parts = input.split('.');
-            const decodedParts = [];
-            let successCount = 0;
-
-            parts.forEach((part, index) => {
-                try {
-
-                    const decoded = this.decodeBase64(part);
-                    if (decoded && decoded !== part) {
-                        decodedParts.push(decoded);
-                        successCount++;
-                    } else {
-                        decodedParts.push(part);
-                    }
-                } catch (e) {
-
-                    try {
-                        const urlDecoded = decodeURIComponent(part.replace(/\+/g, ' '));
-                        if (urlDecoded !== part) {
-                            decodedParts.push(urlDecoded);
-                            successCount++;
-                        } else {
-                            decodedParts.push(part);
-                        }
-                    } catch (e2) {
-                        decodedParts.push(part);
-                    }
-                }
-            });
-
-
-            if (successCount > 0) {
-                results.detectedType = 'mixed_parts';
-                results.methods.push({
-                    type: 'mixed_decoding',
-                    success: true,
-                    content: `DECODED ${successCount}/${parts.length} PARTS:\n\n${decodedParts.map((part, i) => `[PART ${i + 1}]: ${part}`).join('\n\n')}`
-                });
-                return results;
-            }
-        }
-
-
-
-
-        if (input.split('.').length === 3 && /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(input)) {
-            const jwtResult = this.tryJWT(input);
-            if (jwtResult.success) {
-                results.detectedType = 'JWT';
-                results.methods.push(jwtResult);
-                return results;
-            }
-        }
-
-
-        let bestResult = null;
-        let bestScore = 0;
-
-
-        try {
-            const decoded = this.decodeBase64(input);
-            if (decoded && decoded !== input) {
-                const score = this.calculateDecodeScore(decoded);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestResult = {
-                        type: 'base64',
-                        success: true,
-                        content: decoded,
-                        info: 'Standard Base64 decode'
-                    };
-                }
-            }
-        } catch (e) { }
-
-
-        try {
-            const decoded = this.decodeBase64URL(input);
-            if (decoded && decoded !== input) {
-                const score = this.calculateDecodeScore(decoded);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestResult = {
-                        type: 'base64url',
-                        success: true,
-                        content: decoded,
-                        info: 'Base64URL (URL-safe) decode'
-                    };
-                }
-            }
-        } catch (e) { }
-
-
-        try {
-            const decoded = decodeURIComponent(input.replace(/\+/g, ' '));
-            if (decoded !== input) {
-                const score = this.calculateDecodeScore(decoded);
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestResult = {
-                        type: 'url',
-                        success: true,
-                        content: decoded,
-                        info: 'URL percent decode'
-                    };
-                }
-            }
-        } catch (e) { }
-
-
-        const cleanHex = input.replace(/[^0-9a-f]/gi, '');
-        if (cleanHex.length % 2 === 0 && cleanHex.length > 0) {
-            try {
-                let decoded = '';
-                for (let i = 0; i < cleanHex.length; i += 2) {
-                    decoded += String.fromCharCode(parseInt(cleanHex.substr(i, 2), 16));
-                }
-                if (decoded) {
-                    const score = this.calculateDecodeScore(decoded);
-                    if (score > bestScore) {
-                        bestScore = score;
-                        bestResult = {
-                            type: 'hex',
-                            success: true,
-                            content: decoded,
-                            info: 'Hexadecimal decode'
-                        };
-                    }
-                }
-            } catch (e) { }
-        }
-
-
-        if (bestResult && bestScore > 0.3) {
-            results.detectedType = bestResult.type;
-            results.methods.push(bestResult);
-            return results;
-        }
-
-
-        results.detectedType = 'raw_text';
-        results.methods.push({
-            type: 'raw_text',
-            success: true,
-            
-        });
-
-        return results;
-    }
-
-    tryJWT(input) {
-        if (!/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(input)) {
-            return { type: 'jwt', success: false, error: 'Not a JWT format' };
-        }
-
-        const parts = input.split('.');
-        if (parts.length !== 3) {
-            return { type: 'jwt', success: false, error: 'Invalid JWT segments' };
-        }
-
-        try {
-            const [headerB64, payloadB64, signature] = parts;
-            const header = this.decodeBase64JSON(headerB64);
-            const payload = this.decodeBase64JSON(payloadB64);
-
-            return {
-                type: 'jwt',
-                success: true,
-                header: header,
-                payload: payload,
-                signature: signature,
-                content: `JWT DECODED:\n\nHEADER:\n${JSON.stringify(header, null, 2)}\n\nPAYLOAD:\n${JSON.stringify(payload, null, 2)}\n\nSIGNATURE: ${signature}`
-            };
-        } catch (error) {
-            return { type: 'jwt', success: false, error: error.message };
+function setupPlaceholder(editor, text) {
+    function update() {
+        const isEmpty = !editor.textContent.trim() || editor.textContent === text;
+        if (isEmpty) {
+            editor.classList.add("placeholder");
+            editor.textContent = text;
+        } else {
+            editor.classList.remove("placeholder");
         }
     }
-
-    tryBase64All(input) {
-        const results = [];
-
-
-        try {
-            const decoded = this.decodeBase64(input);
-            if (decoded && decoded !== input) {
-                results.push({
-                    type: 'base64_standard',
-                    success: true,
-                    content: decoded,
-                    info: 'Standard Base64 decode'
-                });
-            }
-        } catch (e) { }
-
-
-        try {
-            const decoded = this.decodeBase64URL(input);
-            if (decoded && decoded !== input) {
-                results.push({
-                    type: 'base64url',
-                    success: true,
-                    content: decoded,
-                    info: 'Base64URL (URL-safe) decode'
-                });
-            }
-        } catch (e) { }
-
-
-        if (!input.includes('=')) {
-            try {
-                const withPadding = input + '==';
-                const decoded = this.decodeBase64(withPadding);
-                if (decoded && decoded !== input) {
-                    results.push({
-                        type: 'base64_with_padding',
-                        success: true,
-                        content: decoded,
-                        info: 'Base64 with added padding'
-                    });
-                }
-            } catch (e) { }
+    
+    editor.addEventListener("focus", () => {
+        if (editor.classList.contains("placeholder")) {
+            editor.textContent = "";
+            editor.classList.remove("placeholder");
         }
-
-
-        this.delimiters.forEach(delimiter => {
-            if (input.includes(delimiter)) {
-                const parts = input.split(delimiter);
-                const decodedParts = [];
-                let allDecoded = true;
-
-                parts.forEach(part => {
-                    try {
-                        const decoded = this.decodeBase64(part);
-                        decodedParts.push(decoded);
-                    } catch (e) {
-                        decodedParts.push(part);
-                        allDecoded = false;
-                    }
-                });
-
-                if (allDecoded || decodedParts.some(p => p !== input)) {
-                    results.push({
-                        type: `delimited_base64_${delimiter}`,
-                        success: true,
-                        content: decodedParts.join(' '),
-                        info: `Base64 split by "${delimiter}" delimiter`
-                    });
-                }
-            }
-        });
-
-        return results;
-    }
-
-    tryURLAll(input) {
-        const results = [];
-
-
-        try {
-            const decoded = decodeURIComponent(input.replace(/\+/g, ' '));
-            if (decoded !== input) {
-                results.push({
-                    type: 'url_decode',
-                    success: true,
-                    content: decoded,
-                    info: 'URL percent decode'
-                });
-            }
-        } catch (e) { }
-
-
-        let current = input;
-        for (let i = 0; i < 3; i++) {
-            try {
-                current = decodeURIComponent(current.replace(/\+/g, ' '));
-                if (current !== input) {
-                    results.push({
-                        type: `url_decode_nested_${i + 1}`,
-                        success: true,
-                        content: current,
-                        info: `URL decode ${i + 1} layers deep`
-                    });
-                }
-            } catch (e) {
-                break;
-            }
-        }
-
-        return results;
-    }
-
-    tryHexAll(input) {
-        const results = [];
-        const cleanHex = input.replace(/[^0-9a-f]/gi, '');
-
-        if (cleanHex.length % 2 === 0 && cleanHex.length > 0) {
-            try {
-                let decoded = '';
-                for (let i = 0; i < cleanHex.length; i += 2) {
-                    decoded += String.fromCharCode(parseInt(cleanHex.substr(i, 2), 16));
-                }
-
-                if (decoded && decoded.length > 0) {
-                    results.push({
-                        type: 'hex_decode',
-                        success: true,
-                        content: decoded,
-                        info: 'Hexadecimal decode'
-                    });
-                }
-            } catch (e) { }
-        }
-
-        return results;
-    }
-
-    tryJSON(input) {
-        try {
-            const parsed = JSON.parse(input);
-            return {
-                type: 'json',
-                success: true,
-                content: JSON.stringify(parsed, null, 2),
-                info: 'Valid JSON (already decoded)'
-            };
-        } catch (e) {
-            return { type: 'json', success: false, error: 'Not valid JSON' };
-        }
-    }
-
-    decodeBase64(str) {
-        let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
-        while (base64.length % 4 !== 0) {
-            base64 += '=';
-        }
-
-        try {
-            return decodeURIComponent(atob(base64).split('').map(c => {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-        } catch (e) {
-            return atob(base64);
-        }
-    }
-
-    decodeBase64URL(str) {
-        const standard = str.replace(/-/g, '+').replace(/_/g, '/');
-        return this.decodeBase64(standard);
-    }
-
-    decodeBase64JSON(b64) {
-        const decoded = this.decodeBase64(b64);
-        return JSON.parse(decoded);
-    }
-    calculateDecodeScore(decodedText) {
-        if (!decodedText || decodedText.length === 0) return 0;
-
-
-        const printable = decodedText.match(/[\x20-\x7E\t\n\r]/g);
-        if (!printable) return 0;
-
-        const printableRatio = printable.length / decodedText.length;
-
-
-        let bonus = 0;
-        if (/^https?:\/\//i.test(decodedText)) bonus += 0.3;
-        if (/^[\s\r\n]*[{\[].*[}\]]/s.test(decodedText)) bonus += 0.2;
-        if (decodedText.includes('{') && decodedText.includes('}')) bonus += 0.1;
-
-        return Math.min(1, printableRatio + bonus);
-    }
+    });
+    
+    editor.addEventListener("blur", update);
+    update();
 }
 
-
-const decoder = new AutoWebDecoder();
-const input = document.getElementById('input');
-const output = document.getElementById('output');
-
-
-input.addEventListener('input', () => {
-
-    document.getElementById('charCount').textContent = input.value.length;
-    document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
-    document.getElementById('status').textContent = 'PROCESSING';
-    document.getElementById('status').style.color = '#f39c12';
-
-
-    if (decoder.debounceTimer) {
-        clearTimeout(decoder.debounceTimer);
+function getValue(editor) {
+    if (editor.classList.contains("placeholder")) {
+        editor.textContent = "";
+        editor.classList.remove("placeholder");
+        return "";
     }
+    return editor.textContent;
+}
 
+function setValue(editor, value) {
+    editor.textContent = value;
+    editor.classList.remove("placeholder");
+}
 
-    decoder.debounceTimer = setTimeout(() => {
-        performAutoDecode();
-    }, decoder.debounceDelay);
-});
-
-function performAutoDecode() {
-    const inputText = input.value.trim();
-
-    if (!inputText) {
-        output.innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #95a5a6;">
-                        <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
-                        <h3>Waiting for input...</h3>
-                        <p>Paste encoded data in the left panel</p>
-                    </div>
-                `;
-
-        document.getElementById('detectedType').textContent = '-';
-        document.getElementById('methodCount').textContent = '0';
-        document.getElementById('successCount').textContent = '0';
-        document.getElementById('status').textContent = 'IDLE';
-        document.getElementById('status').style.color = '#7f8c8d';
-        return;
-    }
-
+function b64Decode(v) {
     try {
-        const results = decoder.detectAndDecodeAll(inputText);
-
-
-        document.getElementById('detectedType').textContent = results.detectedType;
-        document.getElementById('methodCount').textContent = results.methods.length;
-        const successful = results.methods.filter(m => m.success).length;
-        document.getElementById('successCount').textContent = successful;
-        document.getElementById('status').textContent = 'DONE';
-        document.getElementById('status').style.color = '#27ae60';
-
-
-        displayResults(results);
-    } catch (error) {
-        output.innerHTML = `
-                    <div class="error">
-                        <h3>Decoding Error</h3>
-                        <pre>${error.message}</pre>
-                    </div>
-                `;
-
-        document.getElementById('status').textContent = 'ERROR';
-        document.getElementById('status').style.color = '#e74c3c';
+        v = v.replace(/\s+/g, '');
+        v = v.replace(/-/g, "+").replace(/_/g, "/");
+        const pad = v.length % 4;
+        if (pad) v += "=".repeat(4 - pad);
+        const decoded = atob(v);
+        try {
+            return decodeURIComponent(decoded.split('').map(c => 
+                '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+            ).join(''));
+        } catch {
+            return decoded;
+        }
+    } catch {
+        return null;
     }
 }
 
-function displayResults(results) {
-    let html = '';
-    const successfulMethods = results.methods.filter(m => m.success);
+function b64Encode(v) {
+    try {
+        return btoa(encodeURIComponent(v).replace(/%([0-9A-F]{2})/g, (match, p1) => 
+            String.fromCharCode('0x' + p1)
+        )).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    } catch {
+        return btoa(v).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }
+}
 
-    if (successfulMethods.length === 0) {
-        html += `
-                    <div>
-                        <h3>no successful decodes found</h3>
-                       
-                    </div>
-                `;
+function hexDecode(hex) {
+    try {
+        hex = hex.replace(/\s+/g, '').toLowerCase();
+        if (!/^[0-9a-f]+$/i.test(hex)) return null;
+        let str = '';
+        for (let i = 0; i < hex.length; i += 2) {
+            str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+        }
+        return str;
+    } catch {
+        return null;
+    }
+}
+
+function hexEncode(str) {
+    let hex = '';
+    for (let i = 0; i < str.length; i++) {
+        hex += str.charCodeAt(i).toString(16).padStart(2, '0');
+    }
+    return hex;
+}
+
+function urlDecode(str) {
+    try {
+        return decodeURIComponent(str);
+    } catch {
+        try {
+            return decodeURI(str);
+        } catch {
+            return str;
+        }
+    }
+}
+
+function urlEncode(str) {
+    return encodeURIComponent(str);
+}
+
+function rot13(str) {
+    return str.replace(/[a-zA-Z]/g, c => 
+        String.fromCharCode(c.charCodeAt(0) + (c.toLowerCase() < 'n' ? 13 : -13))
+    );
+}
+
+function binaryDecode(bin) {
+    try {
+        bin = bin.replace(/\s+/g, '');
+        if (!/^[01]+$/i.test(bin)) return null;
+        let str = '';
+        for (let i = 0; i < bin.length; i += 8) {
+            str += String.fromCharCode(parseInt(bin.substr(i, 8), 2));
+        }
+        return str;
+    } catch {
+        return null;
+    }
+}
+
+function binaryEncode(str) {
+    let bin = '';
+    for (let i = 0; i < str.length; i++) {
+        bin += str.charCodeAt(i).toString(2).padStart(8, '0');
+    }
+    return bin;
+}
+
+function tryJSON(v) {
+    try {
+        return JSON.stringify(JSON.parse(v), null, 2);
+    } catch {
+        return null;
+    }
+}
+
+function detectEncoding(value) {
+    if (!value.trim()) return 'text';
+    
+    const clean = value.replace(/\s+/g, '');
+    
+    if (/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(clean)) {
+        const parts = clean.split('.');
+        if (parts.length === 3) return 'jwt';
+    }
+    
+    if (/^[01]+$/.test(clean) && clean.length >= 8 && clean.length % 8 === 0) return 'binary';
+    
+    if (/^[0-9a-f]+$/i.test(clean) && clean.length % 2 === 0) return 'hex';
+    
+    if (/%[0-9A-Fa-f]{2}/.test(value) && value.includes('%')) return 'url';
+    
+    try {
+        const test = clean.replace(/-/g, "+").replace(/_/g, "/");
+        const pad = test.length % 4;
+        const padded = pad ? test + "=".repeat(4 - pad) : test;
+        atob(padded);
+        return 'base64';
+    } catch {}
+    
+    if (/^[A-Za-z0-9+/=]+$/.test(clean)) {
+        try {
+            const test = clean.replace(/-/g, "+").replace(/_/g, "/");
+            const pad = test.length % 4;
+            const padded = pad ? test + "=".repeat(4 - pad) : test;
+            atob(padded);
+            return 'base64';
+        } catch {}
+    }
+    
+    if (/^[A-Za-z0-9_-]+$/.test(clean) && clean.length > 10) {
+        try {
+            const test = clean.replace(/-/g, "+").replace(/_/g, "/");
+            const pad = test.length % 4;
+            const padded = pad ? test + "=".repeat(4 - pad) : test;
+            atob(padded);
+            return 'base64';
+        } catch {}
+    }
+    
+    return 'text';
+}
+
+function decodeAll(value) {
+    if (!value.trim()) return '';
+    
+    const encoding = detectEncoding(value);
+    const results = [];
+    
+    if (encoding === 'jwt') {
+        const parts = value.trim().split('.');
+        if (parts.length === 3) {
+            try {
+                const header = b64Decode(parts[0]);
+                const payload = b64Decode(parts[1]);
+                if (header) results.push(`header: ${tryJSON(header) || header}`);
+                if (payload) results.push(`payload: ${tryJSON(payload) || payload}`);
+                if (parts[2]) results.push(`signature: ${parts[2]}`);
+            } catch {}
+        }
+    }
+    
+    if (encoding === 'base64') {
+        try {
+            const decoded = b64Decode(value);
+            if (decoded) results.push(tryJSON(decoded) || decoded);
+        } catch {}
+    }
+    
+    if (encoding === 'hex') {
+        try {
+            const decoded = hexDecode(value);
+            if (decoded) results.push(tryJSON(decoded) || decoded);
+        } catch {}
+    }
+    
+    if (encoding === 'url') {
+        try {
+            const decoded = urlDecode(value);
+            if (decoded && decoded !== value) results.push(tryJSON(decoded) || decoded);
+        } catch {}
+    }
+    
+    if (encoding === 'binary') {
+        try {
+            const decoded = binaryDecode(value);
+            if (decoded) results.push(tryJSON(decoded) || decoded);
+        } catch {}
+    }
+    
+    if (results.length === 0) {
+        results.push(value);
+        try {
+            const rot13decoded = rot13(value);
+            if (rot13decoded !== value) results.push(`ROT13: ${rot13decoded}`);
+        } catch {}
+    }
+    
+    return results.join('\n\n');
+}
+
+function encodeAll(value) {
+    if (!value.trim()) return '';
+    
+    const results = [];
+    
+    results.push(b64Encode(value));
+    results.push(hexEncode(value));
+    results.push(urlEncode(value));
+    results.push(binaryEncode(value));
+    
+    const json = tryJSON(value);
+    if (json) {
+        results.push(b64Encode(value));
+    }
+    
+    try {
+        const rot13encoded = rot13(value);
+        if (rot13encoded !== value) results.push(rot13encoded);
+    } catch {}
+    
+    return results.join('\n');
+}
+
+function processText(text, direction) {
+    if (!text.trim()) return '';
+    
+    if (direction === 'decode') {
+        return decodeAll(text);
     } else {
-
-        const grouped = {};
-        successfulMethods.forEach(method => {
-            if (!grouped[method.type]) {
-                grouped[method.type] = [];
-            }
-            grouped[method.type].push(method);
-        });
-
-
-        if (grouped.jwt) {
-            const jwt = grouped.jwt[0];
-            html += `
-                        <div class="decoding-section jwt-section">
-                            <div class="decoding-header">
-                                JSON WEB TOKEN (JWT)
-                            </div>
-                            <div class="decoding-content">
-                                ${jwt.content}
-                            </div>
-                        </div>
-                    `;
-            delete grouped.jwt;
-        }
-
-
-        if (grouped.json) {
-            const json = grouped.json[0];
-            html += `
-                        <div class="decoding-section json-section">
-                            <div class="decoding-header">
-                                📄 JSON DOCUMENT
-                            </div>
-                            <div class="decoding-content">
-                                ${json.content}
-                            </div>
-                        </div>
-                    `;
-            delete grouped.json;
-        }
-
-
-        Object.keys(grouped).forEach(type => {
-            grouped[type].forEach((method, index) => {
-                let typeName = type;
-
-                if (type.includes('base64')) {
-                    typeName = 'BASE64';
-                } else if (type.includes('url')) {
-                    typeName = 'URL ENCODED';
-                } else if (type.includes('hex')) {
-                    typeName = 'HEXADECIMAL';
-                }
-
-                html += `
-                            <div class="decoding-section ${type.includes('base64') ? 'base64-section' : type.includes('url') ? 'url-section' : 'hex-section'}">
-                                <div class="decoding-header">
-                                     ${typeName.toUpperCase()} ${grouped[type].length > 1 ? `(${index + 1}/${grouped[type].length})` : ''}
-                                    <span style="float: right; font-size: 11px; font-weight: normal; color: #7f8c8d;">
-                                        ${method.info}
-                                    </span>
-                                </div>
-                                <div class="decoding-content">
-                                    ${method.content}
-                                </div>
-                            </div>
-                        `;
-            });
-        });
+        return encodeAll(text);
     }
-
-
-
-    output.innerHTML = html;
 }
+
+setupPlaceholder(left, PLACEHOLDERS.left);
+setupPlaceholder(right, PLACEHOLDERS.right);
+
+function handleInput(source, target, direction) {
+    if (lock === target) return;
+    lock = source;
+    
+    const value = getValue(source === 'left' ? left : right);
+    const out = processText(value, direction);
+    setValue(source === 'left' ? right : left, out);
+    
+    lock = null;
+}
+
+left.addEventListener("input", () => handleInput('left', 'right', 'decode'));
+right.addEventListener("input", () => handleInput('right', 'left', 'encode'));
+
+document.addEventListener('paste', (e) => {
+    setTimeout(() => {
+        if (e.target === left) {
+            handleInput('left', 'right', 'decode');
+        } else if (e.target === right) {
+            handleInput('right', 'left', 'encode');
+        }
+    }, 10);
+});

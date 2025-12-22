@@ -30,62 +30,23 @@
             </nav>
 
         </header>
+        <section id="box">
 
-   
-    <div class="container">
-        <div class="panel">
-            <div class="stats">
-                <div class="stat-item">
-                    <span class="stat-label">characters</span>
-                    <span class="stat-value" id="charCount">0</span>
+            <section class="pane">
+                <div id="left" class="editor" contenteditable="true" spellcheck="false" data-empty="true">
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label">type</span>
-                    <span class="stat-value" id="detectedType">-</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">last update</span>
-                    <span class="stat-value" id="lastUpdate">-</span>
-                </div>
-            </div>
+            </section>
 
-            <div class="panel-content">
-                <textarea id="input" autofocus
-                    placeholder="Paste JWT, Base64, URL encoded, hex, or any web encoding here..."></textarea>
-            </div>
-
-        </div>
-
-    
-        <div class="panel">
-            <div class="stats">
-                <div class="stat-item">
-                    <span class="stat-label">methods</span>
-                    <span class="stat-value" id="methodCount">0</span>
+            <section class="pane">
+                <div id="right" class="editor" contenteditable="true" spellcheck="false" data-empty="true">
                 </div>
-                <div class="stat-item">
-                    <span class="stat-label">successful</span>
-                    <span class="stat-value" id="successCount">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">status</span>
-                    <span class="stat-value" id="status">IDLE</span>
-                </div>
-            </div>
-            <div class="panel-content">
-                <div id="output">
-                    <div style="text-align: center; padding: 40px; color: #95a5a6;">
-                        <h3>Waiting for input...</h3>
+            </section>
+        </section>
 
-                    </div>
-                </div>
-            </div>
 
-        </div>
-    </div>
- </main>
- <script src="../../scripts/script.js"></script>
-   <script src="./enc-dec.js"></script>
+    </main>
+    <script src="../../scripts/script.js"></script>
+    <script src="./enc-dec.js"></script>
 </body>
 
 </html>
