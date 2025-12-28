@@ -1,7 +1,6 @@
 const editor = document.getElementById("editor");
 const PLACEHOLDER_TEXT = "drag and drop or paste your code here.";
 
-
 function updatePlaceholder() {
   const isEmpty = !editor.textContent.trim() ||
     editor.textContent === PLACEHOLDER_TEXT;
@@ -27,10 +26,11 @@ editor.addEventListener("blur", () => {
   updatePlaceholder();
 });
 
+let lastProcessedHash = "";
+let debounceTimer = null;
 
 function processContent() {
   const raw = editor.innerText;
-
 
   if (raw === PLACEHOLDER_TEXT || !raw.trim()) {
     updatePlaceholder();
@@ -50,7 +50,6 @@ function processContent() {
       editor.innerHTML = html;
       restoreSelection(selection);
 
-
       if (!editor.textContent.trim()) {
         updatePlaceholder();
       }
@@ -61,110 +60,30 @@ function processContent() {
 }
 
 
-editor.addEventListener("paste", (e) => {
-  e.preventDefault();
-  const text = e.clipboardData.getData("text/plain");
-
-
-  if (editor.classList.contains("placeholder")) {
-    editor.textContent = "";
-    editor.classList.remove("placeholder");
-  }
-
-  document.execCommand("insertText", false, text);
-  setTimeout(processContent, 50);
-});
-
-editor.addEventListener("drop", e => {
-  e.preventDefault();
-  const text = e.dataTransfer.getData("text/plain");
-  if (text) {
-
-    if (editor.classList.contains("placeholder")) {
-      editor.textContent = "";
-      editor.classList.remove("placeholder");
-    }
-
-    document.execCommand("insertText", false, text);
-    processContent();
-  }
-});
-
-
-let debounceTimer = null;
-editor.addEventListener("input", () => {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    processContent();
-  }, 150);
-});
-
-editor.addEventListener("paste", (e) => {
-  e.preventDefault();
-  const text = e.clipboardData.getData("text/plain");
-  document.execCommand("insertText", false, text);
-  setTimeout(processContent, 50);
-});
-
-editor.addEventListener("drop", e => {
-  e.preventDefault();
-  const text = e.dataTransfer.getData("text/plain");
-  if (text) {
-    document.execCommand("insertText", false, text);
-    processContent();
-  }
-});
-
-
-let lastProcessedHash = "";
-
-function processContent() {
-  const raw = editor.innerText;
-  if (!raw.trim()) return;
-
-
-  const hash = raw.length + "|" + raw.slice(0, 100) + "|" + raw.slice(-100);
-  if (hash === lastProcessedHash) return;
-
-
-  setTimeout(() => {
-    const out = advancedBeautify(raw);
-    const findings = scanSensitivePatterns(out);
-    const html = annotateSensitive(out, findings);
-
-
-    if (html !== editor.innerHTML) {
-      const selection = saveSelection();
-      editor.innerHTML = html;
-      restoreSelection(selection);
-    }
-
-    lastProcessedHash = hash;
-  }, 0);
-}
-
 function advancedBeautify(src) {
   try {
-
-    return formatJavaScriptBasic(src);
+    return formatJavaScript(src);
   } catch (e) {
+    console.error("Beautify error:", e);
     return src;
   }
 }
 
-function formatJavaScriptBasic(code) {
-
+function formatJavaScript(code) {
   let result = "";
   let indent = 0;
   const indentSize = 2;
   let inString = false;
   let stringChar = '';
   let escapeNext = false;
+  let inComment = false;
+  let inBlockComment = false;
+  let inTemplate = false;
 
   for (let i = 0; i < code.length; i++) {
     const char = code[i];
     const nextChar = code[i + 1] || '';
-    const prevChar = code[i - 1] || '';
+
 
     if (escapeNext) {
       result += char;
@@ -172,64 +91,128 @@ function formatJavaScriptBasic(code) {
       continue;
     }
 
+
+    if (!inString && !inTemplate) {
+
+      if (!inBlockComment && char === '/' && nextChar === '/') {
+        inComment = true;
+        result += char;
+        continue;
+      }
+
+
+      if (!inBlockComment && char === '/' && nextChar === '*') {
+        inBlockComment = true;
+        result += char;
+        continue;
+      }
+
+      if (inBlockComment && char === '*' && nextChar === '/') {
+        inBlockComment = false;
+        result += "*/";
+        i++;
+        continue;
+      }
+
+      if (inComment && char === '\n') {
+        inComment = false;
+      }
+    }
+
+
+    if (inComment || inBlockComment) {
+      result += char;
+      continue;
+    }
+
+
+    if (char === '\\') {
+      escapeNext = true;
+      result += char;
+      continue;
+    }
+
     if (inString) {
       result += char;
-      if (char === '\\') {
-        escapeNext = true;
-      } else if (char === stringChar) {
+      if (char === stringChar) {
         inString = false;
       }
       continue;
     }
 
-    if (char === '"' || char === "'" || char === '`') {
+    if (inTemplate) {
       result += char;
-      inString = true;
-      stringChar = char;
+      if (char === '`') {
+        inTemplate = false;
+      }
       continue;
     }
 
 
-    if (char === '}') {
-      indent--;
-      result = result.trimEnd() + '\n' + ' '.repeat(indent * indentSize) + '}';
-    } else if (char === '{') {
-      result = result.trimEnd() + ' {\n' + ' '.repeat(++indent * indentSize);
-    } else if (char === ';' && nextChar !== '\n') {
-      result += ';\n' + ' '.repeat(indent * indentSize);
-    } else if (char === '\n') {
-      result += '\n' + ' '.repeat(indent * indentSize);
-    } else {
+    if (char === '"' || char === "'") {
+      inString = true;
+      stringChar = char;
       result += char;
+      continue;
     }
+
+    if (char === '`') {
+      inTemplate = true;
+      result += char;
+      continue;
+    }
+
+
+
+    if (char === '}') {
+      indent = Math.max(0, indent - 1);
+      result = result.trimEnd() + '\n' + ' '.repeat(indent * indentSize) + '}';
+      continue;
+    }
+
+    if (char === '{') {
+      result = result.trimEnd() + ' {\n' + ' '.repeat((++indent) * indentSize);
+      continue;
+    }
+
+
+    if (char === ';') {
+      result += ';';
+      if (nextChar && nextChar !== '\n' && nextChar !== '\r') {
+        result += '\n' + ' '.repeat(indent * indentSize);
+      }
+      continue;
+    }
+
+
+    if (char === '\n') {
+      result += '\n' + ' '.repeat(indent * indentSize);
+      continue;
+    }
+
+
+    result += char;
   }
 
   return result;
 }
 
+
 function scanSensitivePatterns(code) {
   const findings = [];
   const patterns = [
-
     { type: "url", regex: /\bhttps?:\/\/[^\s"'`<>]{8,}/gi, className: "hl-url" },
-
     { type: "jwt", regex: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g, className: "hl-jwt" },
-
     { type: "aws_key", regex: /\b(AKIA|ASIA)[A-Z0-9]{16}\b/g, className: "hl-aws" },
-
     { type: "api_key", regex: /\b(sk_|pk_|key_)[a-z0-9_-]{20,}\b/gi, className: "hl-api" },
-
     { type: "hex_token", regex: /\b[a-f0-9]{32,}\b/gi, className: "hl-hex" },
-
     { type: "base64", regex: /\b[A-Za-z0-9+/]{30,}={0,2}\b/g, className: "hl-b64" },
-
     { type: "endpoint", regex: /\b(api|v[0-9])\/[a-z0-9_/-]{3,}\b/gi, className: "hl-endpoint" },
-
     { type: "secret_var", regex: /(password|passwd|secret|token|key|api[_-]?key)\s*[:=]\s*['"]?([^'"\s,;]{8,})['"]?/gi, className: "hl-secret", group: 2 }
   ];
 
   patterns.forEach(pattern => {
-    const regex = new RegExp(pattern.regex);
+    const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
     let match;
     while ((match = regex.exec(code)) !== null) {
       const value = pattern.group ? match[pattern.group] : match[0];
@@ -244,7 +227,6 @@ function scanSensitivePatterns(code) {
       });
     }
   });
-
 
   findings.sort((a, b) => a.index - b.index);
   const filteredFindings = [];
@@ -262,7 +244,6 @@ function scanSensitivePatterns(code) {
 
 function annotateSensitive(code, findings) {
   if (!findings.length) return escapeHtml(code).replace(/\n/g, "<br>");
-
 
   findings.sort((a, b) => b.index - a.index);
   let result = escapeHtml(code);
@@ -363,20 +344,58 @@ function placeCaretAtEnd(el) {
 }
 
 
+editor.addEventListener("paste", (e) => {
+  e.preventDefault();
+  const text = e.clipboardData.getData("text/plain");
+
+  if (editor.classList.contains("placeholder")) {
+    editor.textContent = "";
+    editor.classList.remove("placeholder");
+  }
+
+  document.execCommand("insertText", false, text);
+  setTimeout(processContent, 50);
+});
+
+editor.addEventListener("drop", e => {
+  e.preventDefault();
+  const text = e.dataTransfer.getData("text/plain");
+  if (text) {
+    if (editor.classList.contains("placeholder")) {
+      editor.textContent = "";
+      editor.classList.remove("placeholder");
+    }
+
+    document.execCommand("insertText", false, text);
+    processContent();
+  }
+});
+
+editor.addEventListener("input", () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    processContent();
+  }, 150);
+});
+
+
 const style = document.createElement('style');
 style.textContent = `
-.hl-url { background: #e6f3ff; color: #0066cc; border-bottom: 1px dotted #0066cc; }
-.hl-jwt { background: #fff0f0; color: #cc0000; border-bottom: 1px dotted #cc0000; }
-.hl-aws { background: #fff5e6; color: #ff6600; border-bottom: 1px dotted #ff6600; }
-.hl-api { background: #f0fff0; color: #009900; border-bottom: 1px dotted #009900; }
-.hl-hex { background: #f0f0ff; color: #6600cc; border-bottom: 1px dotted #6600cc; }
-.hl-b64 { background: #fffaf0; color: #996600; border-bottom: 1px dotted #996600; }
-.hl-endpoint { background: #f5f0ff; color: #660099; border-bottom: 1px dotted #660099; }
-.hl-secret { background: #fff0f5; color: #cc0066; border-bottom: 1px solid #cc0066; }
+  .hl-url { color: #0066cc; }
+  .hl-jwt { color: #cc0000; }
+  .hl-aws { color: #ff6600; }
+  .hl-api { color: #009900; }
+  .hl-hex { color: #6600cc; }
+  .hl-b64 { color: #996600; }
+  .hl-endpoint { color: #660099; }
+  .hl-secret { color: #cc0066; font-weight: bold; }
+  
+  /* Optional: add subtle underline instead of backgrounds */
+  .hl-url, .hl-jwt, .hl-aws, .hl-api, .hl-hex, .hl-b64, .hl-endpoint {
+    border-bottom: 1px dotted currentColor;
+  }
 `;
 document.head.appendChild(style);
 
 
-editor.setAttribute('contenteditable', 'true');
 editor.spellcheck = false;
-
