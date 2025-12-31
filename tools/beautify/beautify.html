@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,17 +7,12 @@
     <link rel="stylesheet" href="../../styles/style.css">
     <link rel="stylesheet" href="./beautify.css">
 </head>
-
 <body>
-
     <main>
         <header>
-
             <button id="theme-toggle" aria-label="toggle theme">
                 <img id="theme-icon" src="./images/moon.png" alt="toggle theme" width="24" height="24">
             </button>
-
-
             <nav>
                 <ul>
                     <a href="../../index.html">
@@ -27,19 +21,26 @@
                     <a href="../enc-dec/enc-dec.html">
                         <li>enc/dec</li>
                     </a>
-
                 </ul>
             </nav>
-
         </header>
-
-        <div id="editor" contenteditable="true">
+        
+        <div class="container">
+            <div id="editor" contenteditable="true"></div>
+            
+            <div id="keyword-sidebar" class="keyword-sidebar">
+                <div class="sidebar-header">
+                    <h4>Keywords Found</h4>
+                    <button class="close-sidebar">&times;</button>
+                </div>
+                <div class="keywords-list"></div>
+            </div>
+            
+            <button id="open-sidebar-btn" class="open-sidebar-btn">Keywords</button>
         </div>
     </main>
 
     <script src="./beautify.js"></script>
     <script src="../../scripts/script.js"></script>
-
 </body>
-
 </html>
