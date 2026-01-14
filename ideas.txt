@@ -1,2 +1,3 @@
 improve design i dont like it as it is rn
     visibility and stability sucks (beautify)
+    add feature: just extract endpoints, urls, secrets 
